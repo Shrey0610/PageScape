@@ -207,6 +207,13 @@ h2 { font-size: clamp(3rem, 6vw, 6.8rem); }
 .explore-message { position: absolute; bottom: 1.5rem; left: 50%; text-align: center; transform: translateX(-50%); }
 .explore-message p { margin: 0; font: .72rem "SFMono-Regular", Consolas, monospace; letter-spacing: .12em; text-transform: uppercase; }
 .explore-message span { color: #d0d3cd; font-size: .58rem; text-shadow: 0 1px 8px #000; }
+.movement-hud { position: absolute; bottom: 1.5rem; left: var(--pad); width: 255px; padding: .9rem; border: 1px solid rgba(255,255,255,.2); color: #eceee8; background: rgba(10,13,13,.7); backdrop-filter: blur(14px); }
+.movement-hud .key-row { display: flex; margin: .22rem 0; gap: .25rem; }
+.movement-hud .key-row:first-child { padding-left: 2.2rem; }
+.movement-hud kbd { display: inline-grid; min-width: 1.85rem; height: 1.85rem; padding: 0 .45rem; border: 1px solid rgba(255,255,255,.32); border-bottom-color: rgba(255,255,255,.55); border-radius: 3px; place-items: center; color: #fff; background: rgba(255,255,255,.08); font: .58rem "SFMono-Regular", Consolas, monospace; box-shadow: 0 2px 0 rgba(0,0,0,.35); }
+.movement-hud p { margin: .65rem 0 0; color: #c8cbc5; font: .55rem "SFMono-Regular", Consolas, monospace; text-transform: uppercase; }
+.movement-hud p kbd { width: auto; height: 1.5rem; margin-right: .25rem; }
+.movement-hud p span { margin: 0 .2rem; color: var(--acid); }
 .world-controls { position: absolute; right: var(--pad); bottom: 1.5rem; width: min(320px, calc(100vw - 2rem)); padding: 1rem; border: 1px solid rgba(255,255,255,.25); background: rgba(13,16,16,.78); backdrop-filter: blur(16px); }
 .world-controls > p:first-child { margin: 0 0 .9rem; color: var(--acid); font: .57rem "SFMono-Regular", Consolas, monospace; letter-spacing: .12em; text-transform: uppercase; }
 .world-controls label { display: block; margin-top: .75rem; color: #a3a7a2; font-size: .61rem; letter-spacing: .09em; text-transform: uppercase; }
@@ -268,6 +275,9 @@ noscript { position: fixed; z-index: 300; right: 1rem; bottom: 1rem; max-width: 
   .frame-sequence figure { min-width: 80vw; scroll-snap-align: center; }
   .world-controls { right: 1rem; bottom: 4.7rem; left: 1rem; width: auto; }
   .explore-message { bottom: 1rem; width: 100%; }
+  .movement-hud { top: 5rem; bottom: auto; left: 1rem; width: auto; padding: .55rem; }
+  .movement-hud .key-row { display: none; }
+  .movement-hud p { margin: 0; }
   .dialog-grid { grid-template-columns: 1fr; }
   .dialog-grid article { min-height: 145px; }
   .dialog-evidence { grid-template-columns: 1fr; }

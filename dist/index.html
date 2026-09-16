@@ -117,7 +117,7 @@
         <div class="chapter-copy world-copy">
           <p class="index-label">04 · Working interaction</p>
           <h2>Now leave the page behind.</h2>
-          <p>The final state loads a second GLB made only from the cottage, bridge, river, forest and mountains. Drag to inspect the scene and test the character/theme interface planned for Assignment 2.</p>
+          <p>The final state loads a separate, human-scale Blender environment: walk through the forest, cross the river, approach the cottage and watch the animated birds above the valley.</p>
           <button class="enter-button" id="enterWorld" type="button"><span>Enter the 3D world</span><i aria-hidden="true">↗</i></button>
           <small>Web prototype · no generated scene imagery</small>
         </div>
@@ -129,13 +129,18 @@
         <p><span>Interactive scene 01</span>Forest at sunset</p>
         <button class="round-button" id="exitWorld" type="button" aria-label="Return to project story">×</button>
       </div>
-      <div class="explore-message"><p>Drag to orbit</p><span>Scroll to zoom · double-click to refocus</span></div>
+      <div class="explore-message"><p>Walk through the world</p><span>Arrow keys / WASD move · Space jumps · Shift runs · Drag rotates camera</span></div>
+      <div class="movement-hud" aria-label="Movement controls">
+        <div class="key-row"><kbd>W</kbd><kbd>↑</kbd></div>
+        <div class="key-row"><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd></div>
+        <p><kbd>Space</kbd> jump <span>·</span> <kbd>Shift</kbd> run</p>
+      </div>
       <form class="world-controls" id="worldControls">
         <p>Prototype controls</p>
         <label>Character image<input id="characterUpload" type="file" accept="image/png,image/jpeg,image/webp" /><span class="upload-control">Choose local image</span></label>
         <div class="character-thumb" id="characterThumb"><span>No image selected</span><img id="characterImage" alt="Uploaded character preview" /></div>
         <label>Atmosphere<select id="atmosphereSelect"><option value="sunset">Warm sunset</option><option value="day">Clear daylight</option><option value="night">Moonlit night</option></select></label>
-        <p class="control-note" id="controlNote">The final production will place this character inside the rendered scene.</p>
+        <p class="control-note" id="controlNote">Playable prototype active. Replace the placeholder model with the final rigged character without changing the controls.</p>
       </form>
     </section>
 
