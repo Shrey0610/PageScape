@@ -1,0 +1,9 @@
+{
+  "name": "pagescape-assignment1-prototype",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Local Three.js prototype for COMP5415 Assignment 1",
+  "dependencies": {
+    "three": "0.180.0"
+  }
+}

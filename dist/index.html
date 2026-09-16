@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="PageScape is an interactive 3D storybook prototype built from an original Blender model." />
+    <title>PageScape — A book built to be entered</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/three/three.module.min.js",
+          "three/addons/": "./vendor/three/addons/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div class="load-screen" id="loadScreen" aria-live="polite">
+      <div class="load-mark" aria-hidden="true"><span></span><span></span></div>
+      <p>Loading the Blender world</p>
+      <div class="load-track"><span id="loadBar"></span></div>
+      <small id="loadValue">0%</small>
+    </div>
+
+    <header class="topbar">
+      <a class="wordmark" href="#origin" aria-label="PageScape home">
+        <strong>PageScape</strong>
+        <span>an interactive Blender study</span>
+      </a>
+      <div class="chapter-readout" aria-live="polite">
+        <span id="chapterNumber">00</span>
+        <span id="chapterName">Opening</span>
+      </div>
+      <button class="plain-button" id="openProcess" type="button">Process index</button>
+    </header>
+
+    <aside class="progress-rail" aria-label="Project chapters">
+      <div class="progress-line"><span id="progressLine"></span></div>
+      <ol>
+        <li><a class="active" href="#origin" data-rail="0"><span>00</span>Origin</a></li>
+        <li><a href="#prototype" data-rail="1"><span>01</span>Prototype</a></li>
+        <li><a href="#system" data-rail="2"><span>02</span>System</a></li>
+        <li><a href="#motion" data-rail="3"><span>03</span>Motion</a></li>
+        <li><a href="#world" data-rail="4"><span>04</span>World</a></li>
+      </ol>
+    </aside>
+
+    <div class="scene-shell" id="sceneShell" aria-label="Interactive 3D model exported from Blender">
+      <canvas id="sceneCanvas"></canvas>
+      <img class="scene-fallback" id="sceneFallback" src="assets/pagescape-refined-hero.png" alt="The completed PageScape Blender model" />
+      <div class="scene-vignette"></div>
+      <p class="scene-proof"><span></span>Live GLB · exported from the submitted Blender file</p>
+      <p class="drag-hint" id="dragHint">Drag to orbit · scroll to zoom</p>
+    </div>
+
+    <main>
+      <section class="chapter chapter-origin" id="origin" data-chapter="0" data-label="Opening">
+        <div class="chapter-copy hero-copy">
+          <p class="index-label">COMP5415 · Multimedia Project Prototype</p>
+          <h1>A book built<br />to be entered.</h1>
+          <p class="lead">PageScape turns a physical pop-up book into the threshold of an explorable story. This page uses the actual model—not a generated campaign image—as its interface.</p>
+          <div class="fact-row" aria-label="Project facts"><span>Blender 3.6</span><span>Three.js</span><span>Original 3D assets</span></div>
+        </div>
+        <div class="scroll-instruction" aria-hidden="true"><span>Scroll to examine</span><i></i></div>
+      </section>
+
+      <section class="chapter chapter-prototype" id="prototype" data-chapter="1" data-label="Prototype">
+        <div class="chapter-copy copy-left">
+          <p class="index-label">01 · The foundation</p>
+          <h2>The homework became a production system.</h2>
+          <p>The first book established scale, page structure and the pop-up principle. The assignment rebuilds it with curved paper, visible page strata and a landscape designed as editable geometry.</p>
+          <dl class="method-list">
+            <div><dt>Retained</dt><dd>Original book meshes + character artwork</dd></div>
+            <div><dt>Rebuilt</dt><dd>Pages, terrain, cottage, bridge, stream and forest</dd></div>
+          </dl>
+        </div>
+        <figure class="evidence evidence-right">
+          <img src="assets/evidence/blender-homework-stage.png" alt="Earlier PageScape homework prototype visible in Blender" />
+          <figcaption><span>Evidence 01</span>Earlier homework prototype · Blender viewport</figcaption>
+        </figure>
+      </section>
+
+      <section class="chapter chapter-system" id="system" data-chapter="2" data-label="Modelling system">
+        <div class="chapter-copy copy-right">
+          <p class="index-label">02 · Designed as parts</p>
+          <h2>Detail comes from repeatable rules.</h2>
+          <p>The refined world demonstrates the modelling techniques assessed in the unit: custom meshes, bevel and solidify modifiers, procedural materials, controlled repetition and level-of-detail choices.</p>
+          <ul class="tech-list">
+            <li><span>Array</span>roof shingles</li>
+            <li><span>Subdivision + displacement</span>mountains</li>
+            <li><span>Custom ribbon mesh</span>winding water</li>
+            <li><span>Repeated assemblies</span>twelve pine trees</li>
+          </ul>
+        </div>
+        <figure class="evidence evidence-left evidence-tall">
+          <img src="assets/evidence/blender-final-interface.png" alt="Final PageScape model and its Blender object hierarchy" />
+          <figcaption><span>Evidence 02</span>Refined editable model · object hierarchy visible</figcaption>
+        </figure>
+      </section>
+
+      <section class="chapter chapter-motion" id="motion" data-chapter="3" data-label="Motion study">
+        <div class="motion-intro">
+          <p class="index-label">03 · One reveal, three states</p>
+          <h2>The animation moves from image to object.</h2>
+          <p>The world starts flat, rises with the page and settles as a complete miniature.</p>
+        </div>
+        <div class="frame-sequence" aria-label="Actual Blender animation checkpoints">
+          <figure><img src="assets/evidence/animation-frame-001.png" alt="Blender animation frame 1" /><figcaption><b>001</b><span>Printed idea</span></figcaption></figure>
+          <figure><img src="assets/evidence/animation-frame-036.png" alt="Blender animation frame 36" /><figcaption><b>036</b><span>Page in motion</span></figcaption></figure>
+          <figure><img src="assets/evidence/animation-frame-080.png" alt="Blender animation frame 80" /><figcaption><b>080</b><span>World revealed</span></figcaption></figure>
+        </div>
+      </section>
+
+      <section class="chapter chapter-world" id="world" data-chapter="4" data-label="Enter the world">
+        <div class="chapter-copy world-copy">
+          <p class="index-label">04 · Working interaction</p>
+          <h2>Now leave the page behind.</h2>
+          <p>The final state loads a second GLB made only from the cottage, bridge, river, forest and mountains. Drag to inspect the scene and test the character/theme interface planned for Assignment 2.</p>
+          <button class="enter-button" id="enterWorld" type="button"><span>Enter the 3D world</span><i aria-hidden="true">↗</i></button>
+          <small>Web prototype · no generated scene imagery</small>
+        </div>
+      </section>
+    </main>
+
+    <section class="explore-ui" id="exploreUI" aria-hidden="true">
+      <div class="explore-heading">
+        <p><span>Interactive scene 01</span>Forest at sunset</p>
+        <button class="round-button" id="exitWorld" type="button" aria-label="Return to project story">×</button>
+      </div>
+      <div class="explore-message"><p>Drag to orbit</p><span>Scroll to zoom · double-click to refocus</span></div>
+      <form class="world-controls" id="worldControls">
+        <p>Prototype controls</p>
+        <label>Character image<input id="characterUpload" type="file" accept="image/png,image/jpeg,image/webp" /><span class="upload-control">Choose local image</span></label>
+        <div class="character-thumb" id="characterThumb"><span>No image selected</span><img id="characterImage" alt="Uploaded character preview" /></div>
+        <label>Atmosphere<select id="atmosphereSelect"><option value="sunset">Warm sunset</option><option value="day">Clear daylight</option><option value="night">Moonlit night</option></select></label>
+        <p class="control-note" id="controlNote">The final production will place this character inside the rendered scene.</p>
+      </form>
+    </section>
+
+    <dialog class="process-dialog" id="processDialog">
+      <div class="dialog-head">
+        <div><p>Production record</p><h2>What is actually in the prototype</h2></div>
+        <button class="round-button" id="closeProcess" type="button" aria-label="Close process index">×</button>
+      </div>
+      <div class="dialog-grid">
+        <article><span>01</span><h3>Student source</h3><p>Original open-book meshes, homework composition and hand-drawn character artwork.</p></article>
+        <article><span>02</span><h3>3D refinement</h3><p>Editable Blender geometry for the cottage, bridge, stream, forest, mountains and paper mechanisms.</p></article>
+        <article><span>03</span><h3>Motion</h3><p>Page turn, vertical pop-up reveal and camera push-in across frames 1–140.</p></article>
+        <article><span>04</span><h3>Web authoring</h3><p>Locally bundled Three.js, responsive HTML/CSS and JavaScript interaction. No CDN is required.</p></article>
+      </div>
+      <figure class="dialog-evidence"><img src="assets/evidence/blender-final-interface.png" alt="PageScape final Blender interface screenshot" /><figcaption>Actual Blender interface captured from the editable submission file.</figcaption></figure>
+      <p class="disclosure">AI-use record: code and procedural refinement were AI-assisted. The visible project is an editable Blender model and the website displays its direct GLB export and documented renders. This assistance is declared in the compulsory acknowledgement.</p>
+    </dialog>
+
+    <footer><p>PageScape · Proposal + working prototype</p><p>COMP5415 Multimedia Design and Authoring · 2026</p></footer>
+    <noscript>This Three.js prototype needs JavaScript enabled. The fallback Blender render remains visible.</noscript>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
