@@ -159,10 +159,30 @@ h2 { font-size: clamp(3rem, 6vw, 6.8rem); }
 .evidence figcaption { display: flex; justify-content: space-between; gap: 1rem; padding: .7rem .8rem; color: #888c88; font: .54rem "SFMono-Regular", Consolas, monospace; letter-spacing: .08em; text-transform: uppercase; }
 .evidence figcaption span { color: var(--acid); }
 
-.chapter-motion { display: block; min-height: 145svh; padding-top: 15vh; background: linear-gradient(180deg, transparent 0%, rgba(9,12,12,.86) 20%, rgba(9,12,12,.95) 82%, transparent 100%); }
+.chapter-motion {
+  display: flex;
+  min-height: 112svh;
+  padding-top: 13vh;
+  padding-bottom: 11vh;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: clamp(2.5rem, 6vh, 5rem);
+  background: linear-gradient(180deg, transparent 0%, rgba(9,12,12,.86) 18%, rgba(9,12,12,.95) 84%, transparent 100%);
+}
 .motion-intro { width: min(800px, 72vw); margin-left: clamp(4rem, 8vw, 9rem); }
 .motion-intro > p:not(.index-label) { color: #e3e5df; text-shadow: 0 1px 10px #000; }
-.frame-sequence { position: absolute; right: var(--pad); bottom: 13vh; left: calc(var(--pad) + clamp(4rem, 8vw, 9rem)); display: grid; gap: 1.1rem; grid-template-columns: repeat(3, 1fr); }
+.frame-sequence {
+  position: relative;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  display: grid;
+  margin-right: 0;
+  margin-left: clamp(4rem, 8vw, 9rem);
+  gap: 1.1rem;
+  grid-template-columns: repeat(3, 1fr);
+}
 .frame-sequence figure { margin: 0; overflow: hidden; border: 1px solid var(--line); background: #111; }
 .frame-sequence img { width: 100%; aspect-ratio: 16/9; object-fit: cover; filter: saturate(.72); transition: filter 300ms ease, transform 500ms ease; }
 .frame-sequence figure:hover img { filter: saturate(1); transform: scale(1.025); }
@@ -230,7 +250,8 @@ noscript { position: fixed; z-index: 300; right: 1rem; bottom: 1rem; max-width: 
   .scene-vignette { background: linear-gradient(180deg, rgba(8,10,10,.2), rgba(8,10,10,.2) 42%, rgba(8,10,10,.93) 90%); }
   .evidence { position: absolute; top: 14vh; right: var(--pad); bottom: auto; left: auto; width: min(55vw, 360px); }
   .chapter-system .evidence { top: auto; bottom: 8vh; }
-  .frame-sequence { right: var(--pad); bottom: 13vh; left: var(--pad); }
+  .chapter-motion { min-height: auto; padding-top: 16vh; padding-bottom: 16vh; gap: clamp(2.5rem, 6vh, 4rem); }
+  .frame-sequence { right: auto; bottom: auto; left: auto; width: 100%; margin: 0; }
   .motion-intro { margin: 0; }
   .dialog-grid { grid-template-columns: repeat(2, 1fr); }
 }
