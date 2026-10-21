@@ -117,8 +117,15 @@
         <div class="chapter-copy world-copy">
           <p class="index-label">04 · Working interaction</p>
           <h2>Now leave the page behind.</h2>
-          <p>The final state loads a separate, human-scale Blender environment: walk through the forest, cross the river, approach the cottage and watch the animated birds above the valley.</p>
+          <p>Enter the expanded Assignment 2 world: roam the forest and mountain valley, cross the river and bridge, and explore around the cottage while animated birds, residents, a cyclist, cars and a scenic train bring the landscape to life.</p>
           <button class="enter-button" id="enterWorld" type="button"><span>Enter the 3D world</span><i aria-hidden="true">↗</i></button>
+          <details class="trailer-preview">
+            <summary>Watch the cinematic preview <span>64 sec · camera, character & sound</span></summary>
+            <video controls preload="metadata" aria-label="PageScape cinematic preview">
+              <source src="media/PageScape_Cinematic_Preview.webm" type="video/webm" />
+              Your browser does not support the WebM video. Open the trailer file in a modern browser.
+            </video>
+          </details>
           <small>Web prototype · no generated scene imagery</small>
         </div>
       </section>
@@ -126,10 +133,12 @@
 
     <section class="explore-ui" id="exploreUI" aria-hidden="true">
       <div class="explore-heading">
-        <p><span>Interactive scene 01</span>Forest at sunset</p>
+        <p><span id="worldEyebrow">PageScape · Playable world</span><strong id="worldTitle">Forest at sunset</strong></p>
         <button class="round-button" id="exitWorld" type="button" aria-label="Return to project story">×</button>
       </div>
       <div class="explore-message"><p>Walk through the world</p><span>Arrow keys / WASD move · Space jumps · Shift runs · Drag rotates camera</span></div>
+      <button class="cinema-button" id="playCinematic" type="button">Play cinematic preview <span>↗</span></button>
+      <div class="cinema-caption" id="cinemaCaption" aria-live="polite"><span id="cinemaKicker"></span><b id="cinemaTitle"></b></div>
       <div class="movement-hud" aria-label="Movement controls">
         <div class="key-row"><kbd>W</kbd><kbd>↑</kbd></div>
         <div class="key-row"><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd></div>
@@ -139,8 +148,8 @@
         <p>Prototype controls</p>
         <label>Character image<input id="characterUpload" type="file" accept="image/png,image/jpeg,image/webp" /><span class="upload-control">Choose local image</span></label>
         <div class="character-thumb" id="characterThumb"><span>No image selected</span><img id="characterImage" alt="Uploaded character preview" /></div>
-        <label>Atmosphere<select id="atmosphereSelect"><option value="sunset">Warm sunset</option><option value="day">Clear daylight</option><option value="night">Moonlit night</option></select></label>
-        <p class="control-note" id="controlNote">Playable prototype active. Replace the placeholder model with the final rigged character without changing the controls.</p>
+        <label>Atmosphere<select id="atmosphereSelect"><option value="sunset">Warm sunset</option><option value="day">Clear daylight</option><option value="night">Moonlit night</option><option value="winter">Winter moonlight</option></select></label>
+        <p class="control-note" id="controlNote">Explore the full landscape. The explorer is controlled with the keys shown; the fox and traffic are animated scene elements.</p>
       </form>
     </section>
 

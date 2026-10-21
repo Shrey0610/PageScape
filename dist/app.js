@@ -25,6 +25,12 @@ const characterThumb = document.querySelector("#characterThumb");
 const characterImage = document.querySelector("#characterImage");
 const atmosphere = document.querySelector("#atmosphereSelect");
 const controlNote = document.querySelector("#controlNote");
+const worldEyebrow = document.querySelector("#worldEyebrow");
+const worldTitle = document.querySelector("#worldTitle");
+const cinematicButton = document.querySelector("#playCinematic");
+const cinemaCaption = document.querySelector("#cinemaCaption");
+const cinemaKicker = document.querySelector("#cinemaKicker");
+const cinemaTitle = document.querySelector("#cinemaTitle");
 
 let renderer;
 let scene;
@@ -45,8 +51,10 @@ let playerRoot;
 let playerSpawn = new THREE.Vector3();
 let playerParts = {};
 let groundMeshes = [];
+let worldWalkBounds = null;
 let obstacleVolumes = [];
 let waterMeshes = [];
+let cinematicMaterialRecords = [];
 let verticalVelocity = 0;
 let grounded = false;
 let jumpQueued = false;
@@ -56,6 +64,12 @@ let scrollCurrent = 0;
 let exploring = false;
 let pointerX = 0;
 let pointerY = 0;
+let cinematic = null;
+let cinematicAudio = null;
+let cinematicRecorder = null;
+let cinemaOriginalPixelRatio = null;
+let cinemaOriginalFov = null;
+let exploreOriginalFov = null;
 
 const clock = new THREE.Clock();
 const pressedKeys = new Set();
@@ -246,7 +260,7 @@ async function loadWorld() {
   enterWorld.querySelector("span").textContent = "Loading landscape…";
   enterWorld.disabled = true;
   try {
-    const result = await loadModel("models/pagescape-explorable-world.glb", 1, undefined, undefined, false);
+    const result = await loadModel("models/pagescape-assignment2-world.glb", 1, undefined, undefined, false);
     worldModel = result.model;
     worldModel.visible = false;
     scene.add(worldModel);
@@ -274,13 +288,28 @@ function preparePlayableWorld(animations) {
   };
 
   groundMeshes = [];
+  worldWalkBounds = null;
   obstacleVolumes = [];
   waterMeshes = [];
+  cinematicMaterialRecords = [];
+  const seenCinematicMaterials = new Set();
   const obstacleObjects = [];
 
   worldModel.traverse((child) => {
     if (child.name.startsWith("COLLIDER_")) child.visible = false;
     if (!child.isMesh) return;
+
+    child.userData.cinematicFoliage = /Tree|Pine|Foliage/i.test(child.name);
+    child.userData.cinematicGround = /Terrain|Grass|Ground|Path/i.test(child.name);
+    const meshMaterials = Array.isArray(child.material) ? child.material : [child.material];
+    meshMaterials.filter((material) => material?.color?.isColor).forEach((material) => {
+      material.userData.cinematicBaseColor ??= material.color.clone();
+      const group = child.userData.cinematicFoliage ? "foliage" : child.userData.cinematicGround ? "ground" : null;
+      if (group && !seenCinematicMaterials.has(material)) {
+        seenCinematicMaterials.add(material);
+        cinematicMaterialRecords.push({ material, base: material.userData.cinematicBaseColor, group });
+      }
+    });
 
     if (/Terrain_|Cottage_Path|Stone_Bridge_Deck/.test(child.name)) groundMeshes.push(child);
     if (/Tree_Web_|Pine_.*Trunk|Cottage_Body_HD|Cottage_Body$/.test(child.name)) obstacleObjects.push(child);
@@ -302,6 +331,14 @@ function preparePlayableWorld(animations) {
   });
 
   worldModel.updateMatrixWorld(true);
+  const outerTerrain = worldModel.getObjectByName("Terrain_Outer_Visual");
+  if (outerTerrain) {
+    worldWalkBounds = new THREE.Box3().setFromObject(outerTerrain);
+    worldWalkBounds.min.x += 1.1;
+    worldWalkBounds.max.x -= 1.1;
+    worldWalkBounds.min.z += 1.1;
+    worldWalkBounds.max.z -= 1.1;
+  }
   obstacleObjects.forEach((object) => {
     const box = new THREE.Box3().setFromObject(object);
     const size = box.getSize(new THREE.Vector3());
@@ -330,7 +367,9 @@ function groundHeightAt(x, z) {
 }
 
 function isBlocked(x, z) {
-  if (Math.hypot(x, z) > 24.2) return true;
+  if (worldWalkBounds) {
+    if (x < worldWalkBounds.min.x || x > worldWalkBounds.max.x || z < worldWalkBounds.min.z || z > worldWalkBounds.max.z) return true;
+  } else if (Math.hypot(x, z) > 24.2) return true;
   return obstacleVolumes.some((volume) => {
     if (volume.type === "circle") return Math.hypot(x - volume.x, z - volume.z) < volume.radius + 0.28;
     return x > volume.minX && x < volume.maxX && z > volume.minZ && z < volume.maxZ;
@@ -410,6 +449,166 @@ function updatePlayer(delta, elapsed) {
   updateWater(elapsed);
 }
 
+async function makeCinematicAudio() {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return null;
+  const ctx = new AudioContextClass();
+  const out = ctx.createMediaStreamDestination();
+  const master = ctx.createGain(); master.gain.value = 0.82;
+  master.connect(ctx.destination); master.connect(out);
+  const response = await fetch("./media/PageScape_Trailer_Audio.wav");
+  if (!response.ok) throw new Error("Trailer soundtrack could not be loaded.");
+  const buffer = await ctx.decodeAudioData(await response.arrayBuffer());
+  const source = ctx.createBufferSource(); source.buffer = buffer; source.connect(master);
+  return { ctx, out, source, master };
+}
+
+async function playCinematic() {
+  if (cinematic) return;
+  try {
+    await loadWorld();
+    enterExploreMode();
+    document.body.classList.add("cinematic");
+    controls.enabled = false;
+    setAtmosphere("sunset");
+    cinematicAudio = await makeCinematicAudio();
+    await cinematicAudio?.ctx.resume();
+    // Record at the actual 720p viewport instead of rendering a Retina-sized
+    // buffer; this reduces frame drops on laptops while keeping the trailer HD.
+    cinemaOriginalPixelRatio = renderer.getPixelRatio();
+    cinemaOriginalFov = camera.fov;
+    camera.fov = 48;
+    camera.updateProjectionMatrix();
+    renderer.setPixelRatio(1);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    const stream = renderer.domElement.captureStream(24);
+    cinematicAudio?.out.stream.getAudioTracks().forEach((track) => stream.addTrack(track));
+    const type = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus") ? "video/webm;codecs=vp9,opus" : "video/webm";
+    cinematicRecorder = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 4200000 });
+    const chunks = [];
+    cinematicRecorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+    cinematicRecorder.onstop = () => {
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(new Blob(chunks, { type }));
+      link.download = "PageScape_Cinematic_Preview.webm";
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(link.href), 30000);
+      cinematicAudio?.ctx.close(); cinematicAudio = null;
+      if (cinemaOriginalPixelRatio !== null) {
+        renderer.setPixelRatio(cinemaOriginalPixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        cinemaOriginalPixelRatio = null;
+      }
+      if (cinemaOriginalFov !== null) {
+        camera.fov = cinemaOriginalFov;
+        camera.updateProjectionMatrix();
+        cinemaOriginalFov = null;
+      }
+    };
+    const path = [
+      { t: 0, p: [playerSpawn.x, playerSpawn.y, playerSpawn.z], camera: [-2, 15, 31], target: [0, 7, 0], title: "Spring wakes the valley", kicker: "PAGESCAPE · A living sketchbook" },
+      { t: 7, p: [playerSpawn.x, playerSpawn.y, playerSpawn.z], camera: [4, 12, 25], target: [0, 4, 0], title: "A valley, revealed from above", kicker: "A handcrafted Blender world" },
+      { t: 14, p: [playerSpawn.x, playerSpawn.y, playerSpawn.z], camera: [7, 9, 1], target: [8.5, 8, -2], title: "Small wings over the canopy", kicker: "Five animated birds cross the sky" },
+      { t: 21, p: [playerSpawn.x, playerSpawn.y, playerSpawn.z], camera: [-5, 4.5, 4.5], target: [-2.4, 2.4, -0.9], title: "Autumn gold through the canopy", kicker: "Follow the trail between the trees" },
+      { t: 28, p: [playerSpawn.x, playerSpawn.y, playerSpawn.z], camera: [3.4, 4.8, 6.5], target: [0, 2.2, -1.5], title: "The mountains hold the horizon", kicker: "A layered miniature landscape" },
+      { t: 35, p: [playerSpawn.x + 1.7, playerSpawn.y, playerSpawn.z - 0.7], camera: [2.8, 3.2, 9.5], target: [0.1, 1.3, 0.2], title: "Winter light on the crossing", kicker: "River · stone · timber" },
+      { t: 43, p: [playerSpawn.x + 4.4, playerSpawn.y, playerSpawn.z - 1.8], camera: [1.3, 3, 8.8], target: [playerSpawn.x + 3.2, 1.2, playerSpawn.z - 1.1], title: "A traveller finds the crossing", kicker: "Walk · run · explore" },
+      { t: 49, p: [playerSpawn.x + 5.1, playerSpawn.y, playerSpawn.z + 0.1], camera: [2.2, 3.2, 7], target: [playerSpawn.x + 4.7, 1.2, playerSpawn.z], title: "One small leap into a bigger story", kicker: "A student-built 3D prototype" },
+      { t: 55, p: [playerSpawn.x + 2.8, playerSpawn.y, playerSpawn.z + 2.8], camera: [0, 8, 16], target: [0, 4, 0], title: "The seasons turn; the story stays", kicker: "Back to the open sky" },
+      { t: 60, p: [playerSpawn.x, playerSpawn.y, playerSpawn.z], camera: [-2, 16, 29], target: [0, 7, 0], title: "PageScape", kicker: "A living sketchbook" }
+    ];
+    const seconds = 60;
+    const start = performance.now();
+    cinematic = { path, seconds, start, lastStep: -1, lastBird: -1, startPos: playerRoot.position.clone() };
+    // Begin on the intended distant crane shot. This avoids a visible snap
+    // from the interactive camera and lets the opening feel composed.
+    camera.position.set(...path[0].camera);
+    controls.target.set(...path[0].target);
+    camera.lookAt(controls.target);
+    if (cinematicAudio?.source) cinematicAudio.source.loop = true;
+    cinematicAudio?.source.start();
+    cinematicRecorder.start(300);
+  } catch (error) {
+    console.error(error);
+    document.body.classList.remove("cinematic");
+    restoreCinematicPalette();
+    if (cinemaOriginalPixelRatio !== null) {
+      renderer.setPixelRatio(cinemaOriginalPixelRatio);
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      cinemaOriginalPixelRatio = null;
+    }
+    if (cinemaOriginalFov !== null) {
+      camera.fov = cinemaOriginalFov;
+      camera.updateProjectionMatrix();
+      cinemaOriginalFov = null;
+    }
+    controlNote.textContent = "Cinematic preview could not start. Use the normal arrow-key controls.";
+  }
+}
+
+function updateCinematic(now, delta) {
+  if (!cinematic) return;
+  const elapsed = (now - cinematic.start) / 1000;
+  const { path, seconds } = cinematic;
+  if (elapsed >= seconds) {
+    cinematic = null;
+    cinemaCaption.classList.remove("visible");
+    document.body.classList.remove("cinematic");
+    cinematicRecorder?.stop(); cinematicRecorder = null;
+    controls.enabled = true;
+    controls.target.copy(playerRoot.position).add(new THREE.Vector3(0, 1.3, 0));
+    controls.update();
+    restoreCinematicPalette();
+    return;
+  }
+  let i = 0;
+  while (i < path.length - 2 && elapsed > path[i + 1].t) i++;
+  const a = path[i], b = path[i + 1];
+  const local = THREE.MathUtils.smoothstep((elapsed - a.t) / Math.max(0.001, b.t - a.t), 0, 1);
+  const targetPos = new THREE.Vector3(...a.p).lerp(new THREE.Vector3(...b.p), local);
+  const jumpPulse = Math.max(0, Math.sin((elapsed - 48) * Math.PI / 1.25)) * (elapsed > 48 && elapsed < 50.5 ? 1.15 : 0);
+  targetPos.y += jumpPulse;
+  playerRoot.position.lerp(targetPos, 0.1);
+  const dx = b.p[0] - a.p[0], dz = b.p[2] - a.p[2];
+  if (Math.hypot(dx, dz) > 0.01) playerRoot.rotation.y = THREE.MathUtils.lerp(playerRoot.rotation.y, Math.atan2(dx, dz), 0.08);
+  const walking = THREE.MathUtils.smoothstep(elapsed, 34.5, 37) * (1 - THREE.MathUtils.smoothstep(elapsed, 49, 51));
+  if (walking > 0 && playerParts.armL && playerParts.legL) {
+    const gait = Math.sin((elapsed - 35) * 8.2) * 0.62 * walking;
+    playerParts.armL.rotation.x = gait;
+    playerParts.armR.rotation.x = -gait;
+    playerParts.legL.rotation.x = -gait;
+    playerParts.legR.rotation.x = gait;
+    if (playerParts.torso) playerParts.torso.position.y = 1.18 + Math.abs(Math.sin((elapsed - 35) * 16.4)) * 0.055 * walking;
+  } else {
+    Object.values(playerParts).forEach((part) => {
+      if (part && /arm|leg/i.test(part.name)) part.rotation.x = THREE.MathUtils.lerp(part.rotation.x, 0, 0.14);
+    });
+    if (playerParts.torso) playerParts.torso.position.y = THREE.MathUtils.lerp(playerParts.torso.position.y, 1.18, 0.14);
+  }
+  const cameraPosition = new THREE.Vector3(...a.camera).lerp(new THREE.Vector3(...b.camera), local);
+  const orbit = Math.sin(elapsed * 0.12) * (elapsed > 34 && elapsed < 53 ? 0.32 : 0.12);
+  cameraPosition.x += orbit;
+  const target = new THREE.Vector3(...a.target).lerp(new THREE.Vector3(...b.target), local);
+  if (elapsed >= 34 && elapsed <= 56) {
+    const followIn = THREE.MathUtils.smoothstep(elapsed, 34, 43);
+    const followOut = 1 - THREE.MathUtils.smoothstep(elapsed, 50.5, 55.5);
+    target.lerp(playerRoot.position.clone().add(new THREE.Vector3(0, 1.25 + jumpPulse * 0.25, 0)), followIn * followOut);
+  }
+  applyCinematicSeason(elapsed);
+  // The path is already eased; use frame-rate-independent damping only for
+  // tiny residual motion, avoiding the sluggish 0:52–0:53 camera handoff.
+  const cameraBlend = 1 - Math.exp(-Math.min(delta, 0.05) * 9);
+  camera.position.lerp(cameraPosition, cameraBlend);
+  camera.lookAt(target);
+  controls.target.copy(target);
+  const active = path[i];
+  if (cinemaTitle.textContent !== active.title) {
+    cinemaKicker.textContent = active.kicker; cinemaTitle.textContent = active.title;
+    cinemaCaption.classList.add("visible");
+    window.setTimeout(() => cinemaCaption.classList.remove("visible"), 4600);
+  }
+}
+
 function cameraState(progress) {
   let from = cameraKeys[0];
   let to = cameraKeys[cameraKeys.length - 1];
@@ -469,15 +668,18 @@ function enterExploreMode() {
   grounded = true;
   playerRoot.getWorldPosition(playerWorldPosition);
   controls.target.copy(playerWorldPosition).add(new THREE.Vector3(0, 1.32, 0));
-  camera.position.copy(controls.target).add(new THREE.Vector3(5.2, 3.25, 6.4));
+  exploreOriginalFov = camera.fov;
+  camera.fov = 54;
+  camera.updateProjectionMatrix();
+  camera.position.copy(controls.target).add(new THREE.Vector3(21, 16, 30));
   controls.enabled = true;
   controls.enablePan = false;
-  controls.minDistance = 3.4;
-  controls.maxDistance = 12.5;
+  controls.minDistance = 8;
+  controls.maxDistance = 54;
   controls.minPolarAngle = 0.28;
   controls.maxPolarAngle = Math.PI * 0.47;
-  scene.fog.near = 16;
-  scene.fog.far = 70;
+  scene.fog.near = 38;
+  scene.fog.far = 130;
   setAtmosphere(atmosphere.value);
   controls.update();
   dragHint.classList.add("visible");
@@ -490,6 +692,11 @@ function exitExploreMode() {
   exploreUI.classList.remove("active");
   exploreUI.setAttribute("aria-hidden", "true");
   controls.enabled = false;
+  if (exploreOriginalFov !== null) {
+    camera.fov = exploreOriginalFov;
+    camera.updateProjectionMatrix();
+    exploreOriginalFov = null;
+  }
   pressedKeys.clear();
   worldModel.visible = false;
   bookModel.visible = true;
@@ -506,11 +713,12 @@ function exitExploreMode() {
 
 function setAtmosphere(value) {
   const states = {
-    sunset: { fog: 0x121816, key: 0xff9b55, rim: 0x76afbd, exposure: 1.02, keyPower: 2.7, skyPower: 1.18, rimPower: 18, label: "Warm sunset lighting applied to the live model." },
-    day: { fog: 0x94a9aa, key: 0xfff1d1, rim: 0x9dd8ff, exposure: 1.18, keyPower: 2.3, skyPower: 1.55, rimPower: 12, label: "Clear daylight lighting applied to the live model." },
-    night: { fog: 0x050817, key: 0x789dff, rim: 0xff9f52, exposure: 0.72, keyPower: 1.3, skyPower: 0.48, rimPower: 24, label: "Moonlit lighting applied to the live model." }
+    sunset: { title: "Forest at sunset", fog: 0x121816, key: 0xff9b55, rim: 0x76afbd, exposure: 1.02, keyPower: 2.7, skyPower: 1.18, rimPower: 18, label: "Warm sunset lighting applied to the live model." },
+    day: { title: "Valley in daylight", fog: 0x94a9aa, key: 0xfff1d1, rim: 0x9dd8ff, exposure: 1.18, keyPower: 2.3, skyPower: 1.55, rimPower: 12, label: "Clear daylight lighting applied to the live model." },
+    night: { title: "Forest under moonlight", fog: 0x050817, key: 0x789dff, rim: 0xff9f52, exposure: 0.72, keyPower: 1.3, skyPower: 0.48, rimPower: 24, label: "Moonlit lighting applied to the live model." },
+    winter: { title: "Winter light over the valley", fog: 0x77899f, key: 0xc8dcff, rim: 0xa9d6ff, exposure: 0.94, keyPower: 1.8, skyPower: 0.88, rimPower: 21, label: "Cool winter lighting palette applied to the live model." }
   };
-  const state = states[value];
+  const state = states[value] || states.sunset;
   scene.fog.color.setHex(state.fog);
   keyLight.color.setHex(state.key);
   rimLight.color.setHex(state.rim);
@@ -518,7 +726,42 @@ function setAtmosphere(value) {
   hemisphereLight.intensity = state.skyPower;
   rimLight.intensity = state.rimPower;
   renderer.toneMappingExposure = state.exposure;
+  worldEyebrow.textContent = `Interactive scene · ${atmosphere.options[atmosphere.selectedIndex].text}`;
+  worldTitle.textContent = state.title;
   controlNote.textContent = state.label;
+}
+
+function restoreCinematicPalette() {
+  cinematicMaterialRecords.forEach(({ material, base }) => material.color.copy(base));
+  if (atmosphere.value) setAtmosphere(atmosphere.value);
+}
+
+function applyCinematicSeason(elapsed) {
+  const palettes = [
+    { start: 0, end: 18, key: 0xffefd0, fog: 0x9eb6a9, rim: 0x8bd0d4, exposure: 1.16, foliage: 0x76965d, ground: 0x9ead81, foliageMix: 0.22, groundMix: 0.09 },
+    { start: 18, end: 35, key: 0xffad69, fog: 0x9b7861, rim: 0xf2ba79, exposure: 1.06, foliage: 0xb87738, ground: 0xc39354, foliageMix: 0.42, groundMix: 0.18 },
+    { start: 35, end: 53, key: 0xb8d1f4, fog: 0x76869f, rim: 0xc3dcff, exposure: 1.0, foliage: 0x85999b, ground: 0xa7b5be, foliageMix: 0.4, groundMix: 0.22 },
+    { start: 53, end: 60, key: 0xffefd0, fog: 0x9eb6a9, rim: 0x8bd0d4, exposure: 1.16, foliage: 0x76965d, ground: 0x9ead81, foliageMix: 0.22, groundMix: 0.09 }
+  ];
+  const index = palettes.findIndex((palette) => elapsed >= palette.start && elapsed <= palette.end);
+  const current = palettes[Math.max(0, index)];
+  const next = palettes[Math.min(palettes.length - 1, Math.max(0, index) + 1)];
+  const blend = index >= 0 ? THREE.MathUtils.smoothstep(elapsed, current.end - 2.5, current.end) : 0;
+  const color = (field) => new THREE.Color(current[field]).lerp(new THREE.Color(next[field]), blend);
+  keyLight.color.copy(color("key"));
+  rimLight.color.copy(color("rim"));
+  scene.fog.color.copy(color("fog"));
+  renderer.toneMappingExposure = THREE.MathUtils.lerp(current.exposure, next.exposure, blend);
+  keyLight.intensity = 2.65;
+  hemisphereLight.intensity = 1.3;
+  rimLight.intensity = 18;
+  const foliageTint = color("foliage");
+  const groundTint = color("ground");
+  cinematicMaterialRecords.forEach(({ material, base, group }) => {
+    const foliage = group === "foliage";
+    const strength = foliage ? THREE.MathUtils.lerp(current.foliageMix, next.foliageMix, blend) : THREE.MathUtils.lerp(current.groundMix, next.groundMix, blend);
+    material.color.copy(base).lerp(foliage ? foliageTint : groundTint, strength);
+  });
 }
 
 function animate() {
@@ -530,8 +773,8 @@ function animate() {
 
   if (exploring) {
     worldMixer?.update(delta);
-    updatePlayer(delta, elapsed);
-    controls.update();
+    if (cinematic) updateCinematic(performance.now(), delta);
+    else { updatePlayer(delta, elapsed); controls.update(); }
   } else {
     scrollCurrent = THREE.MathUtils.lerp(scrollCurrent, scrollTarget, 0.055);
     const state = cameraState(scrollCurrent);
@@ -604,6 +847,7 @@ enterWorld.addEventListener("click", async () => {
     enterWorld.querySelector("span").textContent = "Could not load scene";
   }
 });
+cinematicButton.addEventListener("click", playCinematic);
 exitWorld.addEventListener("click", exitExploreMode);
 
 openProcess.addEventListener("click", () => processDialog.showModal());
